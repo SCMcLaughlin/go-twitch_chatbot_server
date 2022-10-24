@@ -6,7 +6,7 @@ import (
     "strings"
 )
 
-const SERVER_LISTENER_ADDR = ":44632"
+const SERVER_LISTENER_ADDR = "localhost:44632"
 
 type Server struct {
     CommandQueue chan(*Command)
@@ -66,7 +66,7 @@ func handleJsonQueue(server *Server) {
             go handleEndpointInput(ep, server.deleteEndpoint, server.CommandQueue)
         case id := <-server.deleteEndpoint:
             // find index for the endpoint with the given id
-            var idx int
+            idx := -1
             for i := 0; i < len(server.endpoints); i++ {
                 if server.endpoints[i].id == id {
                     idx = i
@@ -76,8 +76,10 @@ func handleJsonQueue(server *Server) {
                 }
             }
             // swap and pop
-            server.endpoints[idx] = server.endpoints[len(server.endpoints)-1]
-            server.endpoints = server.endpoints[:len(server.endpoints)-1]
+            if idx != -1 {
+                server.endpoints[idx] = server.endpoints[len(server.endpoints)-1]
+                server.endpoints = server.endpoints[:len(server.endpoints)-1]
+            }
         }
     }
 }
@@ -118,8 +120,13 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
             return
         }
         
+        if recvlen == 0 {
+            continue
+        }
+        
         str := rem + string(buf[:recvlen])
         for {
+            done := false
             idx := strings.Index(str, "\n")
             if idx == -1 {
                 rem = str
@@ -132,6 +139,8 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
             
             if idx < (len(str)-1) {
                 str = str[idx+1:]
+            } else {
+                done = true
             }
             
             if err != nil {
@@ -139,6 +148,9 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
             }
             
             cmdQueue <- cmd
+            if done {
+                break
+            }
         }
     }
 }
