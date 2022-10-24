@@ -126,7 +126,6 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
         
         str := rem + string(buf[:recvlen])
         for {
-            done := false
             idx := strings.Index(str, "\n")
             if idx == -1 {
                 rem = str
@@ -139,8 +138,6 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
             
             if idx < (len(str)-1) {
                 str = str[idx+1:]
-            } else {
-                done = true
             }
             
             if err != nil {
@@ -148,9 +145,6 @@ func handleEndpointInput(ep *endpoint, deleteEndpoint chan(uint64), cmdQueue cha
             }
             
             cmdQueue <- cmd
-            if done {
-                break
-            }
         }
     }
 }
